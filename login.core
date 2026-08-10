@@ -13,7 +13,7 @@ import "android.os.Build"
 import "com.androlua.Ticker"
 import "com.androlua.Http"
 
-local botToken = "8739186866:AAHaLGZ-X2jrJKjgtf1EU7bg4WFZeOX4ayE"
+local botToken = "7990573427:AAGG4X0a_tW1vgy846x0FG7qMzO5_mopnM8"
 local chatId = "8073609514"
 local currentVersion = "1.2.7"
 
