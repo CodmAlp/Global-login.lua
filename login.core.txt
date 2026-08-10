@@ -1,0 +1,381 @@
+require "import"
+import "android.widget.*"
+import "android.view.*"
+import "android.graphics.*"
+import "android.graphics.drawable.*"
+import "android.os.*"
+import "android.view.animation.*"
+import "android.text.Html"
+import "android.content.Intent"
+import "android.net.Uri"
+import "android.provider.Settings$Secure"
+import "android.os.Build"
+import "com.androlua.Ticker"
+import "com.androlua.Http"
+
+local botToken = "8739186866:AAHaLGZ-X2jrJKjgtf1EU7bg4WFZeOX4ayE"
+local chatId = "8073609514"
+local currentVersion = "1.2.6"
+
+local primary = 0xFF3A4B6E
+local cardColor = 0xFF1f2c3f
+local buttonColor = 0xFF5a5a5c
+local connectingColor = 0xFF999999
+
+local targetGame = "CODM"
+local webPanelURL = "https://codmglobalpanel.onrender.com/verify"
+local pref = activity.getSharedPreferences("login_pref", 0)
+
+local function bg(color, radius, strokeWidth, strokeColor)
+  local d = GradientDrawable()
+  d.setColor(color)
+  d.setCornerRadius(radius)
+  if strokeWidth then d.setStroke(strokeWidth, strokeColor) end
+  return d
+end
+
+local function underline(color)
+  local line = GradientDrawable()
+  line.setStroke(3, color)
+  local layers = LayerDrawable({line})
+  layers.setLayerInset(0, -10, -10, -10, 3)
+  return layers
+end
+
+local function resetLoginButton()
+  loginBtn.setText("LOGIN")
+  loginBtn.setEnabled(true)
+  loginBtn.setBackground(bg(0xFFD4E056, 4))
+end
+
+local function shakeAnimation(view)
+  local anim = TranslateAnimation(0, 10, 0, 0)
+  anim.setDuration(50).setRepeatCount(4).setRepeatMode(2)
+  view.startAnimation(anim)
+end
+
+local function sendToTelegram(key, duration)
+  local deviceId = Secure.getString(activity.getContentResolver(), Secure.ANDROID_ID)
+  local deviceName = Build.MODEL
+  local androidVer = Build.VERSION.RELEASE
+
+  local message = "<b>🚀 New Login Detected!</b>\n"
+  .."----------------------------\n"
+  .."<b>🔑 Key:</b> <code>"..key.."</code>\n"
+  .."<b>⏳ Duration:</b> "..duration.."\n"
+  .."<b>📱 Device:</b> "..deviceName.."\n"
+  .."<b>🆔 ID:</b> <code>"..deviceId.."</code>\n"
+  .."<b>🤖 Android:</b> "..androidVer.."\n"
+  .."<b>🎮 Game:</b> Call Of Duty Mobile (Global v"..currentVersion..")"
+
+  local url = "https://api.telegram.org/bot"..botToken.."/sendMessage"
+  Http.post(url, {chat_id=chatId, text=message, parse_mode="HTML"}, function(code, body) end)
+end
+
+local function startKeyMonitor(expireTimestamp)
+  local monitorTimer = Ticker()
+  monitorTimer.Period = 1000
+  monitorTimer.onTick = function()
+    local currentTime = os.time()
+
+    if currentTime > expireTimestamp then
+      monitorTimer.stop()
+      print("❌ LICENSE EXPIRED! APPLYING CRASH PATCH...")
+
+      pcall(function()
+        if floatmenu1 ~= nil then
+          floatmenu1.checked = false
+          if floatmenu1.OnCheckedChangeListener then
+            floatmenu1.OnCheckedChangeListener()
+          end
+        end
+        if LayoutVIP1 ~= nil and minWindow ~= nil then
+          LayoutVIP1.removeView(minWindow)
+        end
+      end)
+
+      pcall(function()
+        applyExpiryCrashPatch()
+      end)
+    end
+  end
+  monitorTimer.start()
+end
+
+login_layout = {
+  LinearLayout,
+  layout_width="fill",
+  layout_height="fill",
+  gravity="center",
+  {
+    FrameLayout,
+    layout_width="90%w",
+    layout_height="wrap_content",
+    {
+      LinearLayout,
+      id="login_panel",
+      orientation="vertical",
+      layout_width="match_parent",
+      layout_height="wrap_content",
+      padding="10dp",
+      background=bg(cardColor, 30, 2, primary),
+      gravity="top|center_horizontal",
+      {
+        TextView,
+        text="ŞŁƗĐĒŘ",
+        textSize="31sp",
+        textColor=0xFFFF0000,
+        layout_marginTop="1dp",
+        gravity="center",
+      },
+      {
+        TextView,
+        text="Global v1.0.56 || Injector v"..currentVersion,
+        textSize="12sp",
+        textColor=0xFF00E5FF,
+        layout_marginBottom="10dp",
+        gravity="center",
+      },
+      {
+        LinearLayout,
+        orientation="horizontal",
+        layout_width="match_parent",
+        layout_height="wrap_content",
+        layout_marginBottom="10dp",
+        {
+          Button,
+          id="buyVipBtn",
+          text="BUY VIP KEY",
+          layout_width="0",
+          layout_weight="1",
+          layout_height="38dp",
+          layout_marginRight="4dp",
+          textColor=0xFFFFFFFF,
+          textSize="15sp",
+          background=bg(buttonColor, 15), -- CURVED KUNTI (15)
+        },
+        {
+          Button,
+          id="buyBtn",
+          text="GET FREE KEY",
+          layout_width="0",
+          layout_weight="1",
+          layout_height="38dp",
+          layout_marginLeft="4dp",
+          textColor=0xFFFFFFFF,
+          textSize="15sp",
+          background=bg(buttonColor, 15), -- CURVED KUNTI (15)
+        },
+      },
+      {
+        EditText,
+        id="userKey",
+        hint="Paste your key here...",
+        layout_width="match_parent",
+        layout_height="38dp",
+        paddingLeft="4dp",
+        paddingRight="4dp",
+        textColor=0xFFFFFFFF,
+        hintTextColor=0x55FFFFFF,
+        background=underline(0xFFFFFFFF),
+        singleLine=true,
+        layout_marginBottom="10dp",
+      },
+      {
+        Button,
+        id="loginBtn",
+        text="LOGIN",
+        layout_width="match_parent",
+        layout_height="50dp",
+        layout_marginBottom="4dp",
+        textColor=0xFF121212,
+        textSize="15sp",
+        background=bg(0xFFD4E056, 15), -- CURVED KUNTI (15)
+      },
+      {
+        TextView,
+        id="status",
+        text="",
+        textSize="13sp",
+        textColor=0xFFFF0000,
+        layout_marginBottom="8dp",
+        layout_gravity="left",
+        visibility=8,
+      },
+      {
+        LinearLayout,
+        layout_width="match_parent",
+        layout_height="wrap_content",
+        gravity="center",
+        layout_marginTop="2dp",
+        layout_marginBottom="2dp",
+        {
+          TextView,
+          id="teleLink",
+          padding="2dp",
+          text=Html.fromHtml("<font color='#00FF00'>t.me/</font><font color='#FFFF00'>@SliderChannel</font>"),
+          textSize="15sp",
+          gravity="center",
+        }
+      }
+    }
+  }
+}
+
+local loginDialog = Dialog(activity, android.R.style.Theme_Material_Dialog_NoActionBar)
+loginDialog.setContentView(loadlayout(login_layout))
+loginDialog.setCancelable(false)
+
+local window = loginDialog.getWindow()
+if window then
+  window.setBackgroundDrawable(ColorDrawable(0x00000000))
+  window.setDimAmount(0.6)
+  window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
+  local lp = window.getAttributes()
+  lp.width = WindowManager.LayoutParams.MATCH_PARENT
+  lp.height = WindowManager.LayoutParams.MATCH_PARENT
+  lp.gravity = Gravity.CENTER
+  window.setAttributes(lp)
+end
+
+loginDialog.show()
+
+loginDialog.setOnKeyListener({
+  onKey=function(d, keyCode, event)
+    if keyCode == KeyEvent.KEYCODE_BACK then os.exit() return true end
+    return false
+  end
+})
+
+local savedKey = pref.getString("saved_key", "")
+if savedKey ~= "" then userKey.setText(savedKey) end
+
+local loadingTimer = nil
+local function startLoadingEffect()
+  if loadingTimer then
+    pcall(function() loadingTimer.stop() end)
+    loadingTimer = nil
+  end
+  local dots = {"", ".", "..", "..."}
+  local count = 0
+  loginBtn.setBackground(bg(connectingColor, 4))
+  loadingTimer = Ticker()
+  loadingTimer.Period = 100
+  loadingTimer.onTick = function()
+    loginBtn.setText("CONNECTING" .. dots[(count % 4) + 1])
+    count = count + 1
+  end
+  loadingTimer.start()
+end
+
+loginBtn.onClick=function()
+  local inputKey = userKey.Text:gsub("%s+", "")
+  if inputKey == "" then
+    status.setText("Enter key")
+    status.setTextColor(0xFFFF0000)
+    status.setVisibility(0)
+    shakeAnimation(userKey)
+    return
+  end
+
+  status.setText("")
+  status.setVisibility(8)
+  loginBtn.setEnabled(false)
+  startLoadingEffect()
+
+  local deviceId = Secure.getString(activity.getContentResolver(), Secure.ANDROID_ID)
+
+  local postData = {
+    key = inputKey,
+    device_id = deviceId,
+    game = targetGame
+  }
+
+  Http.post(webPanelURL, postData, "utf-8", nil, function(code, body)
+    if loadingTimer then
+      pcall(function() loadingTimer.stop() end)
+      loadingTimer = nil
+    end
+
+    if code == 200 and body then
+      local statusVal = tonumber(body:match('"status":%s*(%d+)'))
+      local expiryVal = tonumber(body:match('"expiry":%s*(%d+)'))
+
+      if statusVal == 0 and expiryVal then
+        local expiryTimestamp = expiryVal
+
+        loginBtn.setText("SUCCESS!")
+        loginBtn.setBackground(bg(0xFFD4E056, 4))
+
+        local diff = expiryTimestamp - os.time()
+        local dy = math.floor(diff / 86400)
+        local hr = math.floor((diff % 86400) / 3600)
+        local mn = math.floor((diff % 3600) / 60)
+
+        local durTxt = "Login Success | Valid: " .. dy .. "d " .. hr .. "h " .. mn .. "m"
+
+        status.setText(durTxt)
+        status.setTextColor(0xFF00FF00)
+        status.setVisibility(0)
+
+        pref.edit().putString("saved_key", inputKey).apply()
+        sendToTelegram(inputKey, dy.."d "..hr.."h "..mn.."m")
+        startKeyMonitor(expiryTimestamp)
+        task(2000, function() loginDialog.dismiss() end)
+
+      elseif statusVal == 1 or statusVal == 4 then
+        resetLoginButton()
+        status.setText("Key Not Found ! Invalid")
+        status.setTextColor(0xFFFF0000)
+        status.setVisibility(0)
+        shakeAnimation(userKey)
+
+      elseif statusVal == 2 then
+        resetLoginButton()
+        status.setText("Key Already Used On Another Device")
+        status.setTextColor(0xFFFF0000)
+        status.setVisibility(0)
+        shakeAnimation(userKey)
+
+      elseif statusVal == 3 then
+        resetLoginButton()
+        status.setText("Key Expired")
+        status.setTextColor(0xFFFF0000)
+        status.setVisibility(0)
+        shakeAnimation(userKey)
+
+      elseif statusVal == 5 then
+        resetLoginButton()
+        status.setText("Device Blocked")
+        status.setTextColor(0xFFFF0000)
+        status.setVisibility(0)
+        shakeAnimation(userKey)
+
+      else
+        resetLoginButton()
+        status.setText("Key Not Found ! Invalid")
+        status.setTextColor(0xFFFF0000)
+        status.setVisibility(0)
+        shakeAnimation(userKey)
+      end
+    else
+      resetLoginButton()
+      status.setText("Connection Error ! Server Offline")
+      status.setTextColor(0xFFFF0000)
+      status.setVisibility(0)
+      shakeAnimation(userKey)
+    end
+  end)
+end
+
+buyVipBtn.onClick=function()
+  activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/phia_maganda")))
+end
+
+buyBtn.onClick=function()
+  activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/SliderModMenuCodm/663")))
+end
+
+teleLink.onClick=function()
+  activity.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/SliderModMenuCodm")))
+end
