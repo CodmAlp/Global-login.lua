@@ -15,7 +15,7 @@ import "com.androlua.Http"
 
 local botToken = "8739186866:AAHaLGZ-X2jrJKjgtf1EU7bg4WFZeOX4ayE"
 local chatId = "8073609514"
-local currentVersion = "1.2.6"
+local currentVersion = "1.2.7"
 
 local primary = 0xFF3A4B6E
 local cardColor = 0xFF1f2c3f
